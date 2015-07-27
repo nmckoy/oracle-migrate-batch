@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:batch="http://www.springframework.org/schema/batch"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+                           http://www.springframework.org/schema/beans/spring-beans.xsd
+                           http://www.springframework.org/schema/batch
+                           http://www.springframework.org/schema/batch/spring-batch.xsd">
+
+
+    <import resource="applicationContext.xml"/>
+    <import resource="database.xml"/>
+    <import resource="s3.xml"/>
+
+    <bean id="taskExecutor" class="org.springframework.core.task.SimpleAsyncTaskExecutor"/>
+
+    <!--partitioner -->
+    <bean id="partitioner" class="gov.fcc.batch.partitioners.MigratePartitioner" >
+        <property name="jdbcTemplate" ref="oracleJdbcTemplate"/>
+    </bean>
+
+    <!--old item reader-->
+    <bean id="oracleItemReader" class="org.springframework.batch.item.database.JdbcCursorItemReader" scope="step">
+        <property name="dataSource" ref="oracleDataSource"/>
+        <property name="sql" value="#{jobParameters['sql']}"/>
+
+        <property name="rowMapper">
+            <bean class="gov.fcc.dao.DocumentsRowMapper"/>
+        </property>
+    </bean>
+
+    <!--paging item reader for use with partitions-->
+    <!--<bean id="oraclePagingItemReader" class="org.springframework.batch.item.database.JdbcPagingItemReader" scope="step">-->
+        <!--<property name="dataSource" ref="oracleDataSource"/>-->
+        <!--<property name="rowMapper">-->
+            <!--<bean class="gov.fcc.dao.DocumentsRowMapper" />-->
+        <!--</property>-->
+        <!--<property name="queryProvider">-->
+            <!--<bean class="org.springframework.batch.item.database.support.SqlPagingQueryProviderFactoryBean">-->
+                <!--<property name="dataSource" ref="oracleDataSource"/>-->
+
+                <!--<property name="fromClause"   value="#{jobParameters['fromClause']}" />-->
+                <!--<property name="selectClause" value="#{jobParameters['selectClause']}" />-->
+                <!--<property name="whereClause"  value="#{jobParameters['whereClause']}"/>-->
+                <!--<property name="sortKey"      value="#{jobParameters['sortKey']}"/>-->
+            <!--</bean>-->
+        <!--</property>-->
+        <!--<property name="parameterValues">-->
+            <!--<map>-->
+                <!--<entry key="min" value="#{stepExecutionContext[minVal]}"/>-->
+                <!--<entry key="max" value="#{stepExecutionContext[maxVal]}"/>-->
+            <!--</map>-->
+        <!--</property>-->
+    <!--</bean>-->
+
+    <bean id="logger" class="gov.fcc.run.Logger" />
+
+    <!--step listeners-->
+    <bean id="stepOneListener" class="gov.fcc.batch.listeners.StepOneListener" >
+        <property name="logger" ref="logger"/>
+    </bean>
+    <bean id="stepTwoListener" class="gov.fcc.batch.listeners.StepTwoListener" scope="step">
+        <property name="logger" ref="logger"/>
+        <property name="threadName" value="#{stepExecutionContext[threadName]}"/>
+    </bean>
+
+    <!--s3 writer and listener-->
+    <bean id="s3Writer" class="gov.fcc.batch.writers.S3Writer">
+        <property name="logger" ref="logger"/>
+        <property name="s3" ref="s3"/>
+    </bean>
+    <bean id="s3WriterListener" class="gov.fcc.batch.listeners.S3WriterListener">
+        <property name="logger" ref="logger"/>
+    </bean>
+
+    <!--postgres writer, listener, and processor-->
+    <bean id="postgresWriter" class="gov.fcc.batch.writers.PostgresWriter" scope="step">
+        <property name="docDAO" ref="documentsDAO"/>
+        <property name="logger" ref="logger" />
+    </bean>
+    <bean id="postgresWriterListener" class="gov.fcc.batch.listeners.PostgresWriterListener">
+        <property name="logger" ref="logger"/>
+    </bean>
+    <bean id="postgresProccessor" class="gov.fcc.batch.processors.PostgresProcessor" scope="step">
+        <property name="threadName" value="#{stepExecutionContext[threadName]}"/>
+        <property name="logger" ref="logger"/>
+    </bean>
+
+    <!--this is the main job to be executed-->
+    <!--includes partitions and slave steps to perform-->
+    <batch:job id="migrateJobPartitioned">
+        <batch:step id="masterStepOne" > <!--next="masterStepTwo"-->
+            <batch:partition step="slaveOne" partitioner="partitioner">
+                <batch:handler grid-size="1" task-executor="taskExecutor"/>
+            </batch:partition>
+        </batch:step>
+        <!--<batch:step id="masterStepTwo">-->
+            <!--<batch:partition step="slaveTwo" partitioner="partitioner">-->
+                <!--<batch:handler grid-size="2" task-executor="taskExecutor"/>-->
+            <!--</batch:partition>-->
+        <!--</batch:step>-->
+    </batch:job>
+
+    <!--slave step one-->
+    <batch:step id="slaveOne">
+        <batch:tasklet transaction-manager="oracleTransactionManager">
+            <batch:chunk reader="oracleItemReader" writer="s3Writer" commit-interval="25">
+                <batch:listeners>
+                    <batch:listener ref="stepOneListener"/>
+                    <batch:listener ref="s3WriterListener"/>
+                </batch:listeners>
+            </batch:chunk>
+        </batch:tasklet>
+    </batch:step>
+
+    <!--slave step 2-->
+    <batch:step id="slaveTwo">
+        <batch:tasklet transaction-manager="oracleTransactionManager">
+            <batch:chunk reader="oracleItemReader" writer="postgresWriter" processor="postgresProccessor" commit-interval="25">
+                <batch:listeners>
+                    <batch:listener ref="stepTwoListener"/>
+                    <batch:listener ref="postgresWriterListener"/>
+                </batch:listeners>
+            </batch:chunk>
+        </batch:tasklet>
+    </batch:step>
+
+
+    <!--old job. new job is with partitions-->
+    <!--the job to be ran-->
+    <!--<batch:job id="migrateJob">-->
+        <!--<batch:step id="stepOne" next="stepTwo">-->
+            <!--<batch:tasklet transaction-manager="oracleTransactionManager">-->
+                <!--<batch:chunk reader="oracleItemReader" writer="s3Writer" commit-interval="50" >-->
+                    <!--<batch:listeners>-->
+                        <!--<batch:listener ref="s3WriterListener"/>-->
+                        <!--<batch:listener ref="stepOneListener"/>-->
+                    <!--</batch:listeners>-->
+                <!--</batch:chunk>-->
+            <!--</batch:tasklet>-->
+        <!--</batch:step>-->
+        <!--<batch:step id="stepTwo">-->
+            <!--<batch:tasklet transaction-manager="postgresTransactionManager">-->
+                <!--<batch:chunk reader="oracleItemReader" writer="postgresWriter" commit-interval="50">-->
+                    <!--<batch:listeners>-->
+                        <!--<batch:listener ref="postgresWriterListener"/>-->
+                        <!--<batch:listener ref="stepTwoListener"/>-->
+                    <!--</batch:listeners>-->
+                <!--</batch:chunk>-->
+            <!--</batch:tasklet>-->
+        <!--</batch:step>-->
+    <!--</batch:job>-->
+
+</beans>
