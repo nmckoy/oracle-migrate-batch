@@ -10,7 +10,7 @@ public class Document {
     private Blob payload;
     private String fullPath;
     private String extension;
-    private static final String s3Path = "";
+    private static final String s3Path = "opif/auth/tv/";
 
     public String getSourceSystem() {
         return sourceSystem;
