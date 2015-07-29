@@ -2,7 +2,7 @@ package gov.fcc.run;
 
 
 public interface MigrateInterface {
-    public static final String sql                   = "SELECT ACCOUNT_ID, PAYLOAD FROM DOCUMENT WHERE ACCOUNT_ID = 'KidVid_75650'";
+    public static final String sqlTest               = "SELECT ACCOUNT_ID, PAYLOAD FROM DOCUMENT WHERE ACCOUNT_ID = 'KidVid_75650'";
 
     public static final String fromClause            = "DOCUMENT";
     public static final String selectClause          = "ACCOUNT_ID, PAYLOAD";

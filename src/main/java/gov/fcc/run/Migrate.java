@@ -24,7 +24,7 @@ public class Migrate {
         Job job = context.getBean("migrateJobPartitioned", Job.class);
 
         JobParameters params = new JobParametersBuilder()
-                .addString("sql",          MigrateInterface.sql)
+                .addString("sqlTest",          MigrateInterface.sqlTest)
                 .addString("fromClause",   MigrateInterface.fromClause)
                 .addString("selectClause", MigrateInterface.selectClause)
                 .addString("whereClause",  MigrateInterface.whereClause)

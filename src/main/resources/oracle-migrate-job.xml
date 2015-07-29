@@ -22,7 +22,7 @@
     <!--old item reader-->
     <bean id="oracleItemReader" class="org.springframework.batch.item.database.JdbcCursorItemReader" scope="step">
         <property name="dataSource" ref="oracleDataSource"/>
-        <property name="sql" value="#{jobParameters['sql']}"/>
+        <property name="sql" value="#{jobParameters['sqlTest']}"/>
 
         <property name="rowMapper">
             <bean class="gov.fcc.dao.DocumentsRowMapper"/>
@@ -77,6 +77,7 @@
     <bean id="postgresWriter" class="gov.fcc.batch.writers.PostgresWriter" scope="step">
         <property name="docDAO" ref="documentsDAO"/>
         <property name="logger" ref="logger" />
+        <property name="s3" ref="s3"/>
     </bean>
     <bean id="postgresWriterListener" class="gov.fcc.batch.listeners.PostgresWriterListener">
         <property name="logger" ref="logger"/>
@@ -89,16 +90,16 @@
     <!--this is the main job to be executed-->
     <!--includes partitions and slave steps to perform-->
     <batch:job id="migrateJobPartitioned">
-        <batch:step id="masterStepOne" > <!--next="masterStepTwo"-->
+        <batch:step id="masterStepOne" next="masterStepTwo" >
             <batch:partition step="slaveOne" partitioner="partitioner">
                 <batch:handler grid-size="1" task-executor="taskExecutor"/>
             </batch:partition>
         </batch:step>
-        <!--<batch:step id="masterStepTwo">-->
-            <!--<batch:partition step="slaveTwo" partitioner="partitioner">-->
-                <!--<batch:handler grid-size="2" task-executor="taskExecutor"/>-->
-            <!--</batch:partition>-->
-        <!--</batch:step>-->
+        <batch:step id="masterStepTwo">
+            <batch:partition step="slaveTwo" partitioner="partitioner">
+                <batch:handler grid-size="1" task-executor="taskExecutor"/>
+            </batch:partition>
+        </batch:step>
     </batch:job>
 
     <!--slave step one-->
