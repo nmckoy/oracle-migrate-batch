@@ -36,13 +36,13 @@ public class PostgresWriter implements ItemWriter<Document> {
                 // check if file exists in s3 before we update
                 S3Object obj = s3.getConnection().getObject(s3.getBucketName(), doc.getFullPath());
 
-                if (obj != null){
-                    docDAO.ETLInsert(docMap);
-    //                docDAO.ETLUpdate(docMap);
+                if (obj != null && docDAO.ETLUpdate(docMap)){
                     logger.addRowsUpdated(1);
+                } else {
+                    logger.addRowsFailed(1);
                 }
             } catch (AmazonClientException e) {
-                e.printStackTrace();
+                logger.log("file " + doc.getFullPath() + " doesnt exist on s3");
                 logger.addRowsFailed(1);
             }
 
