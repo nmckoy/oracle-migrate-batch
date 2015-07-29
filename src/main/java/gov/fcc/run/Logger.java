@@ -17,11 +17,7 @@ public class Logger {
     }
 
     public void log(String text) {
-        if (".".equalsIgnoreCase(text)) {
-            System.out.print(text);
-        } else {
-            System.out.println(text);
-        }
+        System.out.println(text);
     }
 
     public int getRowsUpdated() {

@@ -4,9 +4,14 @@
        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
 
 
+    <bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+        <property name="ignoreUnresolvablePlaceholders" value="true"/>
+        <property name="location" value="s3.properties"/>
+    </bean>
+
     <bean id="s3" class="gov.fcc.s3.FCCAmazonS3">
-        <constructor-arg index="0" value="AKIAI6YNZDDQCSC6WQEQ"/>
-        <constructor-arg index="1" value="VJHvQJvQe9Y/gIOUhhrF0HPtSJTOSAobI2cr2pcd"/>
+      <constructor-arg index="0" value="${fcc.amazon.s3.access}"/>
+      <constructor-arg index="1" value="${fcc.amazon.s3.secret}"/>
     </bean>
 
 </beans>

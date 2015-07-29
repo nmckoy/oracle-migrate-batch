@@ -39,7 +39,6 @@ public class S3Writer implements ItemWriter<Document> {
                 // setting the content length for s3 headers so as to be sure there are no OOM errors
                 meta.setContentLength(Long.valueOf(buff.length));
 
-                System.out.println("filename" + filename);
                 s3.getConnection().putObject(s3.getBucketName(), filename, input, meta);
 
 //                output.write(buff);

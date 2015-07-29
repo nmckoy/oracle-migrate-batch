@@ -7,25 +7,28 @@
                            http://www.springframework.org/schema/jdbc
                            http://www.springframework.org/schema/jdbc/spring-jdbc.xsd">
 
+    <bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+        <property name="ignoreUnresolvablePlaceholders" value="true"/>
+        <property name="location" value="database.properties"/>
+    </bean>
 
     <bean id="oracleDataSource" class="org.apache.commons.dbcp.BasicDataSource" destroy-method="close">
-        <property name="driverClassName" value="oracle.jdbc.OracleDriver"/>
-        <property name="url" value="jdbc:oracle:thin:@daugava:1521/FINK.fcc.gov"/>
-        <property name="username" value="bpif"/>
-        <property name="password" value="bpif$123"/>
+        <property name="driverClassName" value="${oracle.ds.driver}"/>
+        <property name="url" value="${oracle.ds.url}"/>
+        <property name="username" value="${oracle.ds.user}"/>
+        <property name="password" value="${oracle.ds.password}"/>
     </bean>
 
     <bean id="oracleJdbcTemplate" class="org.springframework.jdbc.core.JdbcTemplate">
         <property name="dataSource" ref="oracleDataSource"/>
     </bean>
 
-    <!--this datasource connects to sybase for now just as a test-->
-    <!--have to change to OPIF postgres dev-->
+    <!--OPIF postgres dev-->
     <bean id="postgresDataSource" class="org.apache.commons.dbcp.BasicDataSource" destroy-method="close">
-        <property name="driverClassName" value="com.sybase.jdbc3.jdbc.SybDriver"/>
-        <property name="url" value="jdbc:sybase:Tds:trestakk:2025/uls"/>
-        <property name="username" value="nmckoy"/>
-        <property name="password" value="Chestnut15"/>
+        <property name="driverClassName" value="${postgres.ds.driver}"/>
+        <property name="url" value="${postgres.ds.url}"/>
+        <property name="username" value="${postgres.ds.user}"/>
+        <property name="password" value="${postgres.ds.password}"/>
     </bean>
 
     <bean id="postgresJdbcTemplate" class="org.springframework.jdbc.core.JdbcTemplate">
